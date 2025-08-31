@@ -3,10 +3,18 @@ from datetime import datetime
 from bson import ObjectId
 from pymongo import MongoClient
 import base64
+import os
+from dotenv import load_dotenv
 
-# Blueprint and the mongo db collection setup...
+# Load .env
+load_dotenv()
+
+# Blueprint and the MongoDB collection setup...
 accident_bp = Blueprint('accident', __name__, url_prefix='/api/v1/accident')
-client = MongoClient("localhost", 27017)
+
+# Use MongoDB Atlas instead of localhost
+MONGO_URI = os.getenv("MONGO_URI")
+client = MongoClient(MONGO_URI)
 mongo_db = client.flask_database
 accidents_collection = mongo_db.accidents
 users_collection = mongo_db.users
@@ -15,9 +23,6 @@ users_collection = mongo_db.users
 import cloudinary
 import cloudinary.api
 import cloudinary.uploader
-import os
-from dotenv import load_dotenv
-load_dotenv()
 
 # Create route
 @accident_bp.route('/create', methods=['POST'])
@@ -27,11 +32,13 @@ def create_accident():
 
         frame_base64 = accident_data.get('frame', '')
         frame_bytes = base64.b64decode(frame_base64)
-        # with open('accident_frame.jpg', 'wb') as f:
-        #     f.write(frame_bytes)
 
         try:
-            cloudinary.config(cloud_name = os.getenv('CLOUD_NAME'), api_key=os.getenv('API_KEY'), api_secret=os.getenv('API_SECRET'))
+            cloudinary.config(
+                cloud_name=os.getenv('CLOUD_NAME'),
+                api_key=os.getenv('API_KEY'),
+                api_secret=os.getenv('API_SECRET')
+            )
 
             cloudinary_response = cloudinary.uploader.upload(frame_bytes, folder="accident_frames")
             image_url = cloudinary_response['url']
@@ -41,15 +48,14 @@ def create_accident():
                 "status": 'error',
                 "message": f"Failed to upload image to Cloudinary: {str(e)}"
             }), 500
-            
-        # frame_bytes = base64.b64decode(frame_base64)
+
         accidents_collection.insert_one({
-            "address" : accident_data['address'],
-            "city" : accident_data['city'],
-            "latitude" : accident_data['latitude'],
-            "longitude" : accident_data['longitude'],
-            "severityInPercentage" : accident_data['severityInPercentage'],
-            "severity" : accident_data['severity'],
+            "address": accident_data['address'],
+            "city": accident_data['city'],
+            "latitude": accident_data['latitude'],
+            "longitude": accident_data['longitude'],
+            "severityInPercentage": accident_data['severityInPercentage'],
+            "severity": accident_data['severity'],
             "date": datetime.now(),
             "image_url": image_url
         })
@@ -63,15 +69,11 @@ def create_accident():
             "status": 'Something went wrong.'
         }), 404
 
+
 # List Route
 @accident_bp.route('/all', methods=['GET'])
 def get_all_accidents():
     allDatas = accidents_collection.find()
-    # if allDatas.count() == 0:
-    #     return jsonify({
-    #         "status": "success",
-    #         "message": "No accident data found."
-    #     }), 200
     return jsonify({
         "status": "success",
         "datas": [
@@ -99,7 +101,7 @@ def get_single_accident(accidentId):
         return jsonify({
             "status": "success",
             "data": {
-                "id": str(accident['_id']),  # Convert ObjectId to string for JSON serialization
+                "id": str(accident['_id']),
                 "address": accident['address'],
                 "city": accident['city'],
                 "latitude": accident['latitude'],

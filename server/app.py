@@ -11,24 +11,28 @@ from bson import ObjectId
 from pymongo import MongoClient
 from flask_jwt_extended import JWTManager, create_access_token, get_jwt_identity, jwt_required
 import datetime
-
-client = MongoClient("localhost", 27017)
-mongo_db = client.flask_database
-
-# CLOUDINARY
-import cloudinary
-import cloudinary.api
 import os
 from dotenv import load_dotenv
+
+# Load environment variables
 load_dotenv()
+
+# MongoDB (now using Atlas instead of localhost)
+MONGO_URI = os.getenv("MONGO_URI")   # should be set in .env
+client = MongoClient(MONGO_URI)
+mongo_db = client.flask_database
+
+# CLOUDINARY (configured via .env)
+import cloudinary
+import cloudinary.api
 
 app = Flask(__name__, static_folder='static')
 app.config['UPLOAD_FOLDER'] = 'static/videos'
 
-# JWT... 
+# JWT...
 jwt = JWTManager(app)
-app.config['JWT_SECRET_KEY']=os.getenv('JWT_SECRET_KEY')
-app.config['JWT_ACCESS_TOKEN_EXPIRES']=datetime.timedelta(days=1)
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = datetime.timedelta(days=1)
 
 # MAIL...
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
@@ -45,8 +49,11 @@ app.register_blueprint(accident_bp)
 app.register_blueprint(public_bp)
 app.register_blueprint(emails)
 
+# MongoDB Collections
 accidents_collection = mongo_db.accidents
 users_collection = mongo_db.users
+
+# CORS (frontend on localhost:3000)
 CORS(app, origins=["http://localhost:3000"], supports_credentials=True)
 
 if __name__ == '__main__':
